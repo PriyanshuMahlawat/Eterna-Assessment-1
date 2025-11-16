@@ -2,7 +2,7 @@
 
 Real-time token aggregation service that fetches and displays trending tokens from Jupiter API with live updates.
 
-**Deployment**: [Add your deployment URL here]
+**Deployment**: Free deployment(temporary) on replit. Check the video attached for proper demonstation.
 
 ## Features
 
@@ -55,3 +55,8 @@ Real-time token aggregation service that fetches and displays trending tokens fr
 4. **Pagination**: Large datasets are paginated with next/previous navigation to browse through all available tokens.
 
 5. **Status Indicator**: Connection status is displayed, showing when the WebSocket is active or disconnected.
+
+
+
+
+
