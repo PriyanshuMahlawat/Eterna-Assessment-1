@@ -23,15 +23,26 @@ Real-time token aggregation service that fetches and displays trending tokens fr
 
 ### Backend Process
 
-1. **Polling Service**: The backend continuously polls the Jupiter API every 2 minutes (configurable) across four time windows: 5m, 1h, 6h, and 24h intervals.
+1. **API Source**: The backend uses the Jupiter Token API at `https://lite-api.jup.ag/tokens/v2/toptrending/{interval}?limit=400` to fetch trending tokens.
 
-2. **Token Aggregation**: Data from all intervals is collected and merged to create a comprehensive token list. Duplicate tokens are consolidated, with values like price, volume, liquidity, and market cap being aggregated.
+   The API returns token data including:
+   - Token ID and symbol
+   - Current USD price
+   - 24h price change percentage
+   - Trading volume (buy and sell)
+   - Market capitalization
+   - Liquidity information
+   - Token icon/image
 
-3. **Error Handling**: The service implements exponential backoff to gracefully handle API rate limits and network failures, automatically retrying failed requests with increasing delays.
+2. **Polling Service**: The backend continuously polls this API every 2 minutes (configurable) across four time windows: 5m, 1h, 6h, and 24h intervals.
 
-4. **Data Transformation**: Raw API responses are normalized into a consistent format with properties like symbol, price, volume, liquidity, market cap, and price change metrics.
+3. **Token Aggregation**: Data from all intervals is collected and merged to create a comprehensive token list. Duplicate tokens are consolidated, with values like price, volume, liquidity, and market cap being aggregated.
 
-5. **WebSocket Broadcasting**: Connected clients receive the latest aggregated token data through WebSocket connections in real-time when data updates occur.
+4. **Error Handling**: The service implements exponential backoff to gracefully handle API rate limits and network failures, automatically retrying failed requests with increasing delays.
+
+5. **Data Transformation**: Raw API responses are normalized into a consistent format with properties like symbol, price, volume, liquidity, market cap, and price change metrics.
+
+6. **WebSocket Broadcasting**: Connected clients receive the latest aggregated token data through WebSocket connections in real-time when data updates occur.
 
 ### Frontend Interface
 
@@ -44,7 +55,3 @@ Real-time token aggregation service that fetches and displays trending tokens fr
 4. **Pagination**: Large datasets are paginated with next/previous navigation to browse through all available tokens.
 
 5. **Status Indicator**: Connection status is displayed, showing when the WebSocket is active or disconnected.
-
-## License
-
-MIT
