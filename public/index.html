@@ -38,25 +38,39 @@
 
   <script>
     const statusEl = document.getElementById('status');
-    const ws = new WebSocket('ws://' + window.location.host);
     const tokenMap = new Map();
     let currentCursor = null;
     let prevCursors = [];
 
-    ws.addEventListener('open', ()=> statusEl.textContent = '');
-    ws.addEventListener('close', ()=> statusEl.textContent = '');
-    ws.addEventListener('message', ev=>{
-      try{
-        const msg = JSON.parse(ev.data);
-        if (msg.type === 'INITIAL_LOAD' && Array.isArray(msg.tokens)){
-          msg.tokens.forEach(t=> tokenMap.set(t.id, t));
-          render();
-        } else if (msg.type === 'UPDATE' && Array.isArray(msg.data)){
-          msg.data.forEach(c=> { if (c.token) tokenMap.set(c.token.id, c.token); });
-          render();
-        }
-      }catch(e){}
-    });
+    function connectWebSocket() {
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(protocol + '//' + window.location.host);
+        
+        ws.addEventListener('open', ()=> statusEl.textContent = '');
+        ws.addEventListener('close', ()=> {
+          statusEl.textContent = 'Reconnecting...';
+          setTimeout(connectWebSocket, 3000);
+        });
+        ws.addEventListener('error', ()=> statusEl.textContent = 'Error');
+        ws.addEventListener('message', ev=>{
+          try{
+            const msg = JSON.parse(ev.data);
+            if (msg.type === 'INITIAL_LOAD' && Array.isArray(msg.tokens)){
+              msg.tokens.forEach(t=> tokenMap.set(t.id, t));
+              render();
+            } else if (msg.type === 'UPDATE' && Array.isArray(msg.data)){
+              msg.data.forEach(c=> { if (c.token) tokenMap.set(c.token.id, c.token); });
+              render();
+            }
+          }catch(e){}
+        });
+      } catch(e) {
+        statusEl.textContent = 'No WebSocket';
+      }
+    }
+    
+    connectWebSocket();
 
     document.getElementById('apply').addEventListener('click', () => {
       currentCursor = null;
