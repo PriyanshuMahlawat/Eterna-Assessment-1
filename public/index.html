@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Token Aggregator</title>
+  <style>
+    body{font-family:Segoe UI,Arial;background:#0f0f0f;color:#fff;padding:16px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    select,input,button{background:#111;color:#fff;border:1px solid #333;padding:6px;border-radius:4px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #222}
+    .token-cell{display:flex;gap:8px;align-items:center}
+    .token-icon{width:32px;height:32px;border-radius:50%;object-fit:cover}
+    .positive{color:#4ade80}.negative{color:#ef4444}
+  </style>
+</head>
+<body>
+  <h2>Token Aggregator</h2>
+  <div class="controls">
+    <label>Sort:</label>
+    <select id="sortBy"><option value="volume">Volume</option><option value="price">Price</option></select>
+    <label>Time window:</label>
+    <select id="timeWindow"><option value="5m">5m</option><option value="1h">1h</option><option value="6h">6h</option><option value="24h" selected>24h</option></select>
+    <label>Order:</label>
+    <select id="order"><option value="desc">Desc</option><option value="asc">Asc</option></select>
+    <button id="apply">Apply</button>
+    <button id="prevBtn" style="margin-left:20px">← Prev</button>
+    <button id="nextBtn">Next →</button>
+    <div id="status" style="margin-left:auto"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Token</th><th>Price</th><th>Change</th><th>Volume</th><th>Market Cap</th><th>Liquidity</th></tr>
+    </thead>
+    <tbody id="tokens"></tbody>
+  </table>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const ws = new WebSocket('ws://' + window.location.host);
+    const tokenMap = new Map();
+    let currentCursor = null;
+    let prevCursors = [];
+
+    ws.addEventListener('open', ()=> statusEl.textContent = '');
+    ws.addEventListener('close', ()=> statusEl.textContent = '');
+    ws.addEventListener('message', ev=>{
+      try{
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'INITIAL_LOAD' && Array.isArray(msg.tokens)){
+          msg.tokens.forEach(t=> tokenMap.set(t.id, t));
+          render();
+        } else if (msg.type === 'UPDATE' && Array.isArray(msg.data)){
+          msg.data.forEach(c=> { if (c.token) tokenMap.set(c.token.id, c.token); });
+          render();
+        }
+      }catch(e){}
+    });
+
+    document.getElementById('apply').addEventListener('click', () => {
+      currentCursor = null;
+      prevCursors = [];
+      render();
+    });
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (lastResponse?.nextCursor) {
+        prevCursors.push(currentCursor);
+        currentCursor = lastResponse.nextCursor;
+        render();
+      }
+    });
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (prevCursors.length > 0) {
+        currentCursor = prevCursors.pop();
+        render();
+      }
+    });
+
+    let lastResponse = null;
+
+    async function render(){
+      const sortBy = document.getElementById('sortBy').value;
+      const timeWindow = document.getElementById('timeWindow').value;
+      const order = document.getElementById('order').value;
+      const cursorParam = currentCursor ? `&cursor=${encodeURIComponent(currentCursor)}` : '';
+      const q = `/api/tokens?sortBy=${encodeURIComponent(sortBy)}&timeWindow=${encodeURIComponent(timeWindow)}&order=${encodeURIComponent(order)}&limit=50${cursorParam}`;
+      const res = await fetch(q);
+      lastResponse = await res.json();
+      const tbody = document.getElementById('tokens'); tbody.innerHTML = '';
+      lastResponse.tokens.forEach(t => {
+        const tr = document.createElement('tr');
+        const price = t.price ? Number(t.price).toFixed(6) : '0.000000';
+        const change = t.priceChange24h ? Number(t.priceChange24h).toFixed(2) : '0.00';
+        const vol = t.volume24h ? (t.volume24h).toLocaleString() : '0';
+        const mcap = t.marketCap ? (t.marketCap).toLocaleString() : '0';
+        const liq = t.liquidity ? (t.liquidity).toLocaleString() : '0';
+        tr.innerHTML = `
+          <td><div class="token-cell">${t.image?`<img class="token-icon" src="${t.image}"/>`:''}<div><strong>${t.symbol}</strong><div style="font-size:12px;color:#aaa">${t.name}</div></div></div></td>
+          <td>$${price}</td>
+          <td class="${change<0?'negative':'positive'}">${change}%</td>
+          <td>$${vol}</td>
+          <td>$${mcap}</td>
+          <td>$${liq}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('prevBtn').disabled = prevCursors.length === 0;
+      document.getElementById('nextBtn').disabled = !lastResponse.nextCursor;
+    }
+
+    // initial fetch
+    render();
+  </script>
+</body>
+</html>
