@@ -55,4 +55,7 @@ Real-time token aggregation service that fetches and displays trending tokens fr
 
 5. **Status Indicator**: Connection status is displayed, showing when the WebSocket is active or disconnected.
 
+
+
+
 **Deployment**: Free deployment(temporary) on replit. Check the video attached for proper demonstation.
