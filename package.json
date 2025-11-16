@@ -1,7 +1,7 @@
 {
   "name": "eterna-backend",
   "version": "0.1.0",
-  "description": "Real-time token aggregation service (DexScreener)",
+  "description": "Real-time token aggregation service",
   "main": "backend.js",
   "scripts": {
     "start": "node backend.js",

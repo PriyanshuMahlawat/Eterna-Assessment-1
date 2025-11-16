@@ -19,19 +19,26 @@
   <div class="controls">
     <label>Sort:</label>
     <select id="sortBy"><option value="volume">Volume</option><option value="price">Price</option></select>
+
     <label>Time window:</label>
     <select id="timeWindow"><option value="5m">5m</option><option value="1h">1h</option><option value="6h">6h</option><option value="24h" selected>24h</option></select>
+
     <label>Order:</label>
     <select id="order"><option value="desc">Desc</option><option value="asc">Asc</option></select>
+
     <button id="apply">Apply</button>
+
     <button id="prevBtn" style="margin-left:20px">← Prev</button>
     <button id="nextBtn">Next →</button>
+
     <div id="status" style="margin-left:auto"></div>
   </div>
 
   <table>
     <thead>
-      <tr><th>Token</th><th>Price</th><th>Change</th><th>Volume</th><th>Market Cap</th><th>Liquidity</th></tr>
+      <tr>
+        <th>Token</th><th>Price</th><th>Change</th><th>Volume</th><th>Market Cap</th><th>Liquidity</th>
+      </tr>
     </thead>
     <tbody id="tokens"></tbody>
   </table>
@@ -41,42 +48,59 @@
     const tokenMap = new Map();
     let currentCursor = null;
     let prevCursors = [];
+    let lastResponse = null;
+
+    
 
     function connectWebSocket() {
       try {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const ws = new WebSocket(protocol + '//' + window.location.host);
         
-        ws.addEventListener('open', ()=> statusEl.textContent = '');
-        ws.addEventListener('close', ()=> {
+        ws.addEventListener('open', () => statusEl.textContent = '');
+
+        ws.addEventListener('close', () => {
           statusEl.textContent = 'Reconnecting...';
           setTimeout(connectWebSocket, 3000);
         });
-        ws.addEventListener('error', ()=> statusEl.textContent = 'Error');
-        ws.addEventListener('message', ev=>{
-          try{
+
+        ws.addEventListener('error', () => {
+          statusEl.textContent = 'Error';
+        });
+
+        ws.addEventListener('message', ev => {
+          try {
             const msg = JSON.parse(ev.data);
-            if (msg.type === 'INITIAL_LOAD' && Array.isArray(msg.tokens)){
-              msg.tokens.forEach(t=> tokenMap.set(t.id, t));
+
+           
+
+            if (msg.type === 'INITIAL_LOAD' && Array.isArray(msg.tokens)) {
+              msg.tokens.forEach(t => tokenMap.set(t.id, t));
               render();
-            } else if (msg.type === 'UPDATE' && Array.isArray(msg.data)){
-              msg.data.forEach(c=> { if (c.token) tokenMap.set(c.token.id, c.token); });
+            } 
+            else if (msg.type === 'UPDATE' && Array.isArray(msg.tokens)) {
+              msg.tokens.forEach(t => tokenMap.set(t.id, t));
               render();
             }
-          }catch(e){}
+
+          } catch (e) {}
         });
-      } catch(e) {
+
+      } catch (e) {
         statusEl.textContent = 'No WebSocket';
       }
     }
-    
+
     connectWebSocket();
+
+   
 
     document.getElementById('apply').addEventListener('click', () => {
       currentCursor = null;
       prevCursors = [];
       render();
     });
+
     document.getElementById('nextBtn').addEventListener('click', () => {
       if (lastResponse?.nextCursor) {
         prevCursors.push(currentCursor);
@@ -84,6 +108,7 @@
         render();
       }
     });
+
     document.getElementById('prevBtn').addEventListener('click', () => {
       if (prevCursors.length > 0) {
         currentCursor = prevCursors.pop();
@@ -91,39 +116,54 @@
       }
     });
 
-    let lastResponse = null;
-
-    async function render(){
+    async function render() {
       const sortBy = document.getElementById('sortBy').value;
       const timeWindow = document.getElementById('timeWindow').value;
       const order = document.getElementById('order').value;
+
       const cursorParam = currentCursor ? `&cursor=${encodeURIComponent(currentCursor)}` : '';
       const q = `/api/tokens?sortBy=${encodeURIComponent(sortBy)}&timeWindow=${encodeURIComponent(timeWindow)}&order=${encodeURIComponent(order)}&limit=50${cursorParam}`;
+
       const res = await fetch(q);
       lastResponse = await res.json();
-      const tbody = document.getElementById('tokens'); tbody.innerHTML = '';
+
+      const tbody = document.getElementById('tokens');
+      tbody.innerHTML = '';
+
       lastResponse.tokens.forEach(t => {
         const tr = document.createElement('tr');
+
         const price = t.price ? Number(t.price).toFixed(6) : '0.000000';
         const change = t.priceChange24h ? Number(t.priceChange24h).toFixed(2) : '0.00';
-        const vol = t.volume24h ? (t.volume24h).toLocaleString() : '0';
-        const mcap = t.marketCap ? (t.marketCap).toLocaleString() : '0';
-        const liq = t.liquidity ? (t.liquidity).toLocaleString() : '0';
+        const vol = t.volume24h ? t.volume24h.toLocaleString() : '0';
+        const mcap = t.marketCap ? t.marketCap.toLocaleString() : '0';
+        const liq = t.liquidity ? t.liquidity.toLocaleString() : '0';
+
         tr.innerHTML = `
-          <td><div class="token-cell">${t.image?`<img class="token-icon" src="${t.image}"/>`:''}<div><strong>${t.symbol}</strong><div style="font-size:12px;color:#aaa">${t.name}</div></div></div></td>
+          <td>
+            <div class="token-cell">
+              ${t.image ? `<img class="token-icon" src="${t.image}"/>` : ''}
+              <div>
+                <strong>${t.symbol}</strong>
+                <div style="font-size:12px;color:#aaa">${t.name}</div>
+              </div>
+            </div>
+          </td>
           <td>$${price}</td>
-          <td class="${change<0?'negative':'positive'}">${change}%</td>
+          <td class="${change < 0 ? 'negative' : 'positive'}">${change}%</td>
           <td>$${vol}</td>
           <td>$${mcap}</td>
           <td>$${liq}</td>
         `;
+
         tbody.appendChild(tr);
       });
+
       document.getElementById('prevBtn').disabled = prevCursors.length === 0;
       document.getElementById('nextBtn').disabled = !lastResponse.nextCursor;
     }
 
-    // initial fetch
+    
     render();
   </script>
 </body>
