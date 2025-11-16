@@ -2,6 +2,7 @@
 
 Real-time token aggregation service that fetches and displays trending tokens from Jupiter API with live updates.
 
+**Deployment**: Free deployment(temporary) on replit. Check the video attached for proper demonstation.
 
 ## Features
 
@@ -58,4 +59,4 @@ Real-time token aggregation service that fetches and displays trending tokens fr
 
 
 
-**Deployment**: Free deployment(temporary) on replit. Check the video attached for proper demonstation.
+
